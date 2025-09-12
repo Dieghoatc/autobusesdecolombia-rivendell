@@ -51,7 +51,7 @@ app.post("/", upload.single("image"), async (req, res) => {
         { input: watermarkBuffer, gravity: "southeast" },
         { input: logoBuffer, gravity: "southwest" }
       ])
-      .avif({ quality: 80 })
+      .avif({ quality: 70 })
       .pipe(res);
 
   } catch (error) {
