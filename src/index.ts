@@ -4,14 +4,22 @@ import sharp from "sharp";
 import { createTextImage } from "./helper/createTextImage";
 import path from "path";
 
-
 const app = express();
 const PORT = 8000;
 const upload = multer({ storage: multer.memoryStorage() });
+
 const logoPath = path.join(process.cwd(), "assets", "logo.png");
 
+// Load logo at server startup
+let logoBuffer: Buffer;
+sharp(logoPath)
+  .png()
+  .toBuffer()
+  .then(buf => logoBuffer = buf)
+  .catch(err => console.error("Error cargando logo:", err));
+
 app.get("/", (req, res) => {
-  res.json({ messafe: "Server running successfully" });
+  res.json({ message: "Server running successfully" });
 });
 
 app.listen(PORT, () => {
@@ -23,25 +31,28 @@ app.post("/", upload.single("image"), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
     const { author, location } = req.body;
+    if (!author) return res.status(400).json({ error: "Faltan campos: author" });
 
-    if (!author) {
-      return res.status(400).json({ error: 'Faltan campos: author' });
-    }
+    // First we get the metadata of the image
+    const image = sharp(req.file.buffer);
+    const metadata = await image.metadata();
 
-    const resized = await sharp(req.file.buffer)
-      .resize(2000)
-      .avif({ quality: 80 })
+    // Generate watermark proporcional to image width (e.g: 20%)
+    const watermarkBuffer = await sharp(createTextImage(author, location))
+      .resize({ width: Math.round(metadata.width * 0.2) })
+      .png()
       .toBuffer();
-    
-    const watermark = await sharp(createTextImage(author, location)).png().toBuffer();
-    const logo = await sharp(logoPath).resize(120).png().toBuffer();
 
-    const output = await sharp(resized)
-    .composite([{ input: watermark , gravity: 'southeast'}, {input: logoPath, gravity: 'southwest'} ])
-    .avif({ quality: 80 })
-    .toBuffer();
-
-    return res.set("Content-Type", "image/avif").send(output);
+    // Using streaming to process the main image and compose watermark + logo
+    res.set("Content-Type", "image/avif");
+    image
+      .resize({ width: 2000, withoutEnlargement: true })
+      .composite([
+        { input: watermarkBuffer, gravity: "southeast" },
+        { input: logoBuffer, gravity: "southwest" }
+      ])
+      .avif({ quality: 80 })
+      .pipe(res);
 
   } catch (error) {
     console.error(error);
