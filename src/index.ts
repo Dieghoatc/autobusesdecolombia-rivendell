@@ -6,9 +6,9 @@ import path from "path";
 
 
 const app = express();
-const PORT = 3002;
+const PORT = 8000;
 const upload = multer({ storage: multer.memoryStorage() });
-const logoPath = path.join(__dirname, "assets", "logo.png");
+const logoPath = path.join(process.cwd(), "assets", "logo.png");
 
 app.get("/", (req, res) => {
   res.json({ messafe: "Server running successfully" });
