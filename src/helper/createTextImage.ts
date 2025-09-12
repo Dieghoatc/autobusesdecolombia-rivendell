@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 const fontBase64 = fs.readFileSync(
-  path.join(__dirname, "assets", "fonts", "arial.ttf.base64"),
+  path.join(process.cwd(), "src/assets/fonts/arial.ttf.base64"),
   "utf-8"
 );
 
