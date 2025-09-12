@@ -2,10 +2,13 @@ import express from "express";
 import multer from "multer";
 import sharp from "sharp";
 import { createTextImage } from "./helper/createTextImage";
+import path from "path";
+
 
 const app = express();
 const PORT = 3002;
 const upload = multer({ storage: multer.memoryStorage() });
+const logoPath = path.join(__dirname, "assets", "logo.png");
 
 app.get("/", (req, res) => {
   res.json({ messafe: "Server running successfully" });
@@ -31,9 +34,10 @@ app.post("/", upload.single("image"), async (req, res) => {
       .toBuffer();
     
     const watermark = await sharp(createTextImage(author, location)).png().toBuffer();
+    const logo = await sharp(logoPath).resize(120).png().toBuffer();
 
     const output = await sharp(resized)
-    .composite([{ input: watermark , gravity: 'southeast'} ])
+    .composite([{ input: watermark , gravity: 'southeast'}, {input: logoPath, gravity: 'southwest'} ])
     .avif({ quality: 80 })
     .toBuffer();
 
