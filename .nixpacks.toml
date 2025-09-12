@@ -1,0 +1,11 @@
+[project]
+name = "image-services-node"
+include = ["src", "assets", "package.json", "package-lock.json"]
+
+[build]
+# Node.js version
+packages = ["nodejs_18", "npm_9"]
+dependencies = [
+  "fontconfig",
+  "fonts-dejavu-core"
+]
