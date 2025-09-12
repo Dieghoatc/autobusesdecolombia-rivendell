@@ -1,3 +1,11 @@
+import fs from "fs";
+import path from "path";
+
+const fontBase64 = fs.readFileSync(
+  path.join(__dirname, "assets", "fonts", "arial.ttf.base64"),
+  "utf-8"
+);
+
 export function createTextImage(author: string, location?: string) {
   const width = 600;
   const height = 100;
@@ -15,7 +23,7 @@ export function createTextImage(author: string, location?: string) {
       <style>      
       @font-face {
         font-family: "Arial";
-        src: url("src/assets/fonts/arial.ttf");
+        src: url("data:font/ttf;base64,${fontBase64}");
       }
         .author { fill: white; font-size: 22px; font-weight: bold; font-family: Arial; opacity: 0.8; }
         .location { fill: white; font-size: 18px; font-family: Arial; opacity: 0.7; }
