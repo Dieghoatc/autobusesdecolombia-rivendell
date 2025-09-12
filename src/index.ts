@@ -46,7 +46,7 @@ app.post("/", upload.single("image"), async (req, res) => {
     // Using streaming to process the main image and compose watermark + logo
     res.set("Content-Type", "image/avif");
     image
-      .resize({ width: 2000, withoutEnlargement: true })
+      .resize({ width: 1800, withoutEnlargement: true })
       .composite([
         { input: watermarkBuffer, gravity: "southeast" },
         { input: logoBuffer, gravity: "southwest" }
