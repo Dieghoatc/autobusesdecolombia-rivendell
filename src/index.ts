@@ -8,15 +8,18 @@ const app = express();
 const PORT = 8000;
 const upload = multer({ storage: multer.memoryStorage() });
 
-const logoPath = path.join(process.cwd(), "assets", "logo.png");
+// Longest side of the output image. Larger photos are scaled down, smaller ones are kept as is.
+const MAX_DIMENSION = Number(process.env.MAX_DIMENSION) || 2560;
+// AVIF quality (1-100). 75 keeps fine detail without visible artifacts.
+const AVIF_QUALITY = Number(process.env.AVIF_QUALITY) || 75;
 
-// Load logo at server startup
-let logoBuffer: Buffer;
-sharp(logoPath)
-  .png()
-  .toBuffer()
-  .then(buf => logoBuffer = buf)
-  .catch(err => console.error("Error cargando logo:", err));
+// Watermark and logo sizes, relative to the output image width. 0.4 matches how the
+// watermark looked on phone photos before (it was sized from the original width).
+const WATERMARK_WIDTH_RATIO = 0.4;
+const LOGO_WIDTH_RATIO = 0.17;
+
+// High resolution logo, scaled down to the size each image needs
+const logoPath = path.join(process.cwd(), "assets", "logox3.png");
 
 app.get("/", (req, res) => {
   res.json({ message: "Server running successfully" });
@@ -33,27 +36,43 @@ app.post("/", upload.single("image"), async (req, res) => {
     const { author, location } = req.body;
     if (!author) return res.status(400).json({ error: "Faltan campos: author" });
 
-    // First we get the metadata of the image
-    const image = sharp(req.file.buffer);
-    const metadata = await image.metadata();
+    // Apply the EXIF orientation (phone photos) and limit the size. Kept as raw
+    // pixels so the only lossy step is the final AVIF encoding.
+    const { data, info } = await sharp(req.file.buffer)
+      .rotate()
+      .resize({
+        width: MAX_DIMENSION,
+        height: MAX_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
 
-    // Generate watermark proporcional to image width (e.g: 20%)
-    const watermarkBuffer = await sharp(createTextImage(author, location))
-      .resize({ width: Math.round(metadata.width * 0.2) })
+    // Rendered directly at the final size so the text stays sharp
+    const watermarkBuffer = await sharp(
+      createTextImage(author, location, Math.round(info.width * WATERMARK_WIDTH_RATIO))
+    )
       .png()
       .toBuffer();
 
-    // Using streaming to process the main image and compose watermark + logo
-    res.set("Content-Type", "image/avif");
-    image
-      .resize({ width: 1800, withoutEnlargement: true })
+    const logoBuffer = await sharp(logoPath)
+      .resize({ width: Math.round(info.width * LOGO_WIDTH_RATIO) })
+      .png()
+      .toBuffer();
+
+    const output = await sharp(data, {
+      raw: { width: info.width, height: info.height, channels: info.channels },
+    })
       .composite([
         { input: watermarkBuffer, gravity: "southeast" },
-        { input: logoBuffer, gravity: "southwest" }
+        { input: logoBuffer, gravity: "southwest" },
       ])
-      .avif({ quality: 60 })
-      .pipe(res);
+      .avif({ quality: AVIF_QUALITY })
+      .toBuffer();
 
+    res.set("Content-Type", "image/avif");
+    res.send(output);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
