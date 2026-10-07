@@ -25,7 +25,7 @@ export function createTextImage(author: string, location: string | undefined, ou
       </defs>
       <rect x="0" y="${height - 70}" width="100%" height="80" fill="url(#fade-bg)" />
       <style>      
-        .author { fill: white; font-size: 22px; font-weight: bold; font-family: Arial; opacity: 0.8; }
+        .author { fill: white; font-size: 18px; font-weight: bold; font-family: Arial; opacity: 0.8; }
         .location { fill: white; font-size: 18px; font-family: Arial; opacity: 0.7; }
       </style>
       <text x="100%" y="60%" text-anchor="end">
